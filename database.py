@@ -38,12 +38,15 @@ class mySQLDB:
         # print(f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_with_types} {constraints_sql})")
     
     def insert_data(self, table_name, data):
-        columns = ', '.join(data[0].keys())
-        values = ', '.join(['%s'] * len(data[0]))
+        columns = ', '.join(data.keys())
+        values = ', '.join(['%s'] * len(data))
         sql = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
-        values_list = [tuple(item.values()) for item in data]
+        # values_list = [tuple(data[item]) for item in data]
+        values_list = [tuple(data.values()) ]
         self.cursor.executemany(sql, values_list)
         self.connection.commit()
+        
+
         
     def select_data(self, table_name, columns='*', where=None):
         sql = f"SELECT {columns} FROM {table_name}"
@@ -77,6 +80,121 @@ if dbSetup:
 
         # Use the created database
         db.use_database("crickSheet_analysis")
+
+         # Create the test_match table
+        db.create_table("test_match", {
+            "match_id": "VARCHAR(20)",
+            "city": "VARCHAR(100)",
+            "venue": "VARCHAR(300)",
+            "date": "JSON",
+            "match_type": "VARCHAR(10)",
+            "team_type": "VARCHAR(20)",
+            "event": "JSON",
+            "teams": "JSON",
+            "gender": "VARCHAR(10)",
+            "officials": "JSON",
+            "player_of_the_match": "JSON",
+            "players_registry": "JSON",
+            "toss": "JSON",
+            "outcome": "JSON",
+            "innings_1": "JSON",
+            "innings_2": "JSON",
+            "innings_3": "JSON",
+            "innings_4": "JSON",
+            "spl_innings": "JSON",
+        }, {
+            "PRIMARY KEY": ["pk_match_id", "match_id"],
+            
+        })
+
+        # Create the players_test table for palyer statistics in test matches
+        db.create_table("players_test", {
+            "player_id": "VARCHAR(20)",
+            "name": "VARCHAR(100)",
+            "matches": "INT",
+            "batted_innings": "INT",
+            "balls_faced": "INT",
+            "runs": "INT",
+            "not_outs": "INT",
+            "highest_score": "INT",
+            "batting_average": "FLOAT",
+            "strike_rate": "FLOAT",
+            "hundreds": "INT",
+            "fifties": "INT",
+            "fours": "INT",
+            "sixes": "INT",
+            "wicket_by_catches": "INT",
+            "wicket_by_stumpings": "INT",
+            "wicket_by_bowled": "INT",
+            "balls_bowled": "INT",
+            "wickets": "INT",
+            "best_bowling": "VARCHAR(20)",
+            "bowling_average": "FLOAT",
+            "economy": "FLOAT",
+            "five_wickets": "INT",
+            "ten_wickets": "INT",
+            "maidens": "INT",
+            })
+
+        # Create the players_odi table for player statistics in ODI matches
+        db.create_table("players_odi", {
+            "player_id": "VARCHAR(20)",
+            "name": "VARCHAR(100)",
+            "matches": "INT",
+            "batted_innings": "INT",
+            "balls_faced": "INT",
+            "runs": "INT",
+            "not_outs": "INT",
+            "highest_score": "INT",
+            "batting_average": "FLOAT",
+            "strike_rate": "FLOAT",
+            "hundreds": "INT",
+            "fifties": "INT",
+            "fours": "INT",
+            "sixes": "INT",
+            "wicket_by_catches": "INT",
+            "wicket_by_stumpings": "INT",
+            "wicket_by_bowled": "INT",
+            "balls_bowled": "INT",
+            "wickets": "INT",
+            "best_bowling": "VARCHAR(20)",
+            "bowling_average": "FLOAT",
+            "economy": "FLOAT",
+            "five_wickets": "INT",
+            "ten_wickets": "INT",
+            "maidens": "INT",
+            })
+        
+        # Create the players_t20 table for player statistics in T20 matches
+        db.create_table("players_t20", {
+            "player_id": "VARCHAR(20)",
+            "name": "VARCHAR(100)",
+            "matches": "INT",
+            "batted_innings": "INT",
+            "balls_faced": "INT",
+            "runs": "INT",
+            "not_outs": "INT",
+            "highest_score": "INT",
+            "batting_average": "FLOAT",
+            "strike_rate": "FLOAT",
+            "hundreds": "INT",
+            "fifties": "INT",
+            "fours": "INT",
+            "sixes": "INT",
+            "wicket_by_catches": "INT",
+            "wicket_by_stumpings": "INT",
+            "wicket_by_bowled": "INT",
+            "balls_bowled": "INT",
+            "wickets": "INT",
+            "best_bowling": "VARCHAR(20)",
+            "bowling_average": "FLOAT",
+            "economy": "FLOAT",
+            "five_wickets": "INT",
+            "ten_wickets": "INT",
+            "maidens": "INT",
+            })
+
+    
 
     except(mysql.connector.Error, mysql.connector.Warning) as e:
         print(f"An error occurred: {e}")

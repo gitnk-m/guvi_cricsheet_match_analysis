@@ -1,6 +1,13 @@
 import json
-import os
 import zipfile
+from database import mySQLDB
+
+db = mySQLDB(
+    host = 'gateway01.us-west-2.prod.aws.tidbcloud.com',
+    user = '2giLRMddJvjQq3S.root',
+    password = 'RBujztoEPbUH8Mhy',
+    port = 4000
+)
 
 class Match:
     def __init__(self, file_name):
@@ -53,8 +60,11 @@ class Match:
                     # Iterate through each delivery in the over
                     for delivery in over['deliveries']:
                         ball_count += 1
-                        bowler_id = self.data["info"]["registry"]["people"][delivery.get("bowler")]
-                        batter_id = self.data["info"]["registry"]["people"][delivery.get("batter")]
+                        # bowler_id = self.data["info"]["registry"]["people"][delivery.get("bowler")]
+                        # batter_id = self.data["info"]["registry"]["people"][delivery.get("batter")]
+
+                        bowler_id = delivery.get("bowler")
+                        batter_id = delivery.get("batter")
 
                         # Check for Maiden Over
                         if delivery.get("extras") and (delivery["extras"].get("wides") or delivery["extras"].get("noballs")):
@@ -170,7 +180,7 @@ class Match:
                     bowling[bowler_id]["maidens"] += 1
 
                 # Store the inning record
-                self.records[f'inning_{self.inning_count}'] = {
+                self.records[f'innings_{self.inning_count}'] = {
                     "team": team,
                     "total": total,
                     "batting": batting,
@@ -179,7 +189,7 @@ class Match:
                     "fall_of_wickets": fall_of_wickets
                     }
             else:
-                self.records[f'inning_{self.inning_count}'] = inning
+                self.records[f'spl_innings'] = inning
 
 #  Trial to add match info using method calling
     def add_record(self, key, value):
@@ -237,16 +247,33 @@ class Match:
         df.to_csv(f'{self.file_name}.csv', index=False)
         print(f"DataFrame saved to {self.file_name}.csv")
 
+    def save_to_db(self):
+        # Assuming db is an instance of a database connection class
+        formatted = {}
+        for key, value in self.records.items():
+            if isinstance(value, dict):
+                formatted[key] = json.dumps(value)
+            elif isinstance(value, list):
+                formatted[key] = json.dumps(value)
+            else:
+                formatted[key] = value
+        if self.records["match_type"] == "Test":
+            # Use the created database
+            db.use_database("crickSheet_analysis")
+            # insert data into the test_match table
+            db.insert_data("test_match", formatted)
+        print(f"Records for match {self.file_name} saved to database.")
 
-# Example usage
+# read match data from JSON file
 if __name__ == "__main__":
     match = Match('63963')
     # match.match_info_2()
     match.match_info()
     match.extract_innings()
+    match.save_to_db()
     # match.metaData()
-    match.save_records('test_oops_1.json')
-    match.df_generate()
+    # match.save_records('test_oops_1.json')
+    # match.df_generate()
 
 
 # loop through all JSON files in the Downloads folder
@@ -276,3 +303,14 @@ if __name__ == "__main__":
 #                 match.save_file(f'test_all.txt')
 
 print("All match records processed and saved to test_all.txt")
+
+
+
+
+
+# db = mySQLDB(
+#     host = 'gateway01.us-west-2.prod.aws.tidbcloud.com',
+#     user = '2giLRMddJvjQq3S.root',
+#     password = 'RBujztoEPbUH8Mhy',
+#     port = 4000
+#     )
