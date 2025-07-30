@@ -9,8 +9,8 @@ class mySQLDB:
         self.connection = mysql.connector.connect(
             host=host,
             user=user,
-            password=password,
-            database=database,
+            # password=password,
+            # database=database,
             port=port
         )
         self.cursor = self.connection.cursor()
@@ -45,6 +45,21 @@ class mySQLDB:
         values_list = [tuple(data.values()) ]
         self.cursor.executemany(sql, values_list)
         self.connection.commit()
+    
+    def insert_data_player_stats(self, table_name, data, sum_fields, compare_fields):
+        columns = ', '.join(data.keys())
+        values = ', '.join(['%s'] * len(data))
+        sum_updates = ', '.join([f"{field} = {field} + VALUES({field})" for field in sum_fields])
+        compare_updates = ', '.join([f"{field} = GREATEST({field}, VALUES({'runs' if field == 'highest_score' else field}))" for field in compare_fields])
+        updates = sum_updates+", "+compare_updates
+        sql = f'''
+            INSERT INTO {table_name} ({columns}) 
+            VALUES ({values})
+            ON DUPLICATE KEY UPDATE {updates}'''
+        # values_list = [tuple(data[item]) for item in data]
+        values_list = [tuple(data.values()) ]
+        self.cursor.executemany(sql, values_list)
+        self.connection.commit()
         
 
         
@@ -66,11 +81,17 @@ class mySQLDB:
         
 
 
+# db = mySQLDB(
+#     host = 'gateway01.us-west-2.prod.aws.tidbcloud.com',
+#     user = '2giLRMddJvjQq3S.root',
+#     password = 'RBujztoEPbUH8Mhy',
+#     port = 4000
+#     )
+
 db = mySQLDB(
-    host = 'gateway01.us-west-2.prod.aws.tidbcloud.com',
-    user = '2giLRMddJvjQq3S.root',
-    password = 'RBujztoEPbUH8Mhy',
-    port = 4000
+    host = 'localhost',
+    user = 'root',
+    port = 3306
     )
 
 if dbSetup:
@@ -82,7 +103,7 @@ if dbSetup:
         db.use_database("crickSheet_analysis")
 
          # Create the test_match table
-        db.create_table("test_match", {
+        db.create_table("matchs", {
             "match_id": "VARCHAR(20)",
             "city": "VARCHAR(100)",
             "venue": "VARCHAR(300)",
@@ -97,11 +118,7 @@ if dbSetup:
             "players_registry": "JSON",
             "toss": "JSON",
             "outcome": "JSON",
-            "innings_1": "JSON",
-            "innings_2": "JSON",
-            "innings_3": "JSON",
-            "innings_4": "JSON",
-            "spl_innings": "JSON",
+            "innings": "JSON",
         }, {
             "PRIMARY KEY": ["pk_match_id", "match_id"],
             
@@ -111,90 +128,104 @@ if dbSetup:
         db.create_table("players_test", {
             "player_id": "VARCHAR(20)",
             "name": "VARCHAR(100)",
+            "country": "VARCHAR(100)",
             "matches": "INT",
             "batted_innings": "INT",
             "balls_faced": "INT",
             "runs": "INT",
             "not_outs": "INT",
             "highest_score": "INT",
-            "batting_average": "FLOAT",
-            "strike_rate": "FLOAT",
+            "batting_average": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_faced > 0 AND (batted_innings - not_outs) > 0 THEN ROUND(runs / (batted_innings - not_outs), 2)  ELSE 0 END) STORED",
+            "strike_rate": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_faced > 0 AND runs > 0 THEN ROUND((runs / balls_faced) * 100, 2) ELSE 0 END) STORED",
             "hundreds": "INT",
             "fifties": "INT",
             "fours": "INT",
             "sixes": "INT",
             "wicket_by_catches": "INT",
             "wicket_by_stumpings": "INT",
-            "wicket_by_bowled": "INT",
+            "catches": "INT",
+            "stumpings": "INT",
             "balls_bowled": "INT",
+            "run_conceded":"INT",
             "wickets": "INT",
-            "best_bowling": "VARCHAR(20)",
-            "bowling_average": "FLOAT",
-            "economy": "FLOAT",
+            "bowling_average": "FLOAT GENERATED ALWAYS AS (CASE WHEN wickets > 0 AND run_conceded > 0 THEN ROUND(run_conceded / wickets, 2)  ELSE 0 END) STORED",
+            "economy": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_bowled > 0 AND run_conceded > 0 THEN ROUND(run_conceded / balls_bowled / 6, 2)  ELSE 0 END) STORED",
+            "bowling_SR": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_bowled > 0 AND wickets > 0 THEN ROUND(balls_bowled / wickets, 2) ELSE 0 END) STORED",
             "five_wickets": "INT",
             "ten_wickets": "INT",
-            "maidens": "INT",
+            "maidens": "INT"
+            }, {
+            "PRIMARY KEY": ["pk_player_id", "player_id"],
             })
 
         # Create the players_odi table for player statistics in ODI matches
         db.create_table("players_odi", {
             "player_id": "VARCHAR(20)",
             "name": "VARCHAR(100)",
+            "country": "VARCHAR(100)",
             "matches": "INT",
             "batted_innings": "INT",
             "balls_faced": "INT",
             "runs": "INT",
             "not_outs": "INT",
             "highest_score": "INT",
-            "batting_average": "FLOAT",
-            "strike_rate": "FLOAT",
+            "batting_average": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_faced > 0 AND (batted_innings - not_outs) > 0 THEN ROUND(runs / (batted_innings - not_outs), 2)  ELSE 0 END) STORED",
+            "strike_rate": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_faced > 0 AND runs > 0 THEN ROUND((runs / balls_faced) * 100, 2) ELSE 0 END) STORED",
             "hundreds": "INT",
             "fifties": "INT",
             "fours": "INT",
             "sixes": "INT",
             "wicket_by_catches": "INT",
             "wicket_by_stumpings": "INT",
-            "wicket_by_bowled": "INT",
+            "catches": "INT",
+            "stumpings": "INT",
             "balls_bowled": "INT",
+            "run_conceded":"INT",
             "wickets": "INT",
-            "best_bowling": "VARCHAR(20)",
-            "bowling_average": "FLOAT",
-            "economy": "FLOAT",
+            "bowling_average": "FLOAT GENERATED ALWAYS AS (CASE WHEN wickets > 0 AND run_conceded > 0 THEN ROUND(run_conceded / wickets, 2)  ELSE 0 END) STORED",
+            "economy": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_bowled > 0 AND run_conceded > 0 THEN ROUND(run_conceded / balls_bowled / 6, 2)  ELSE 0 END) STORED",
+            "bowling_SR": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_bowled > 0 AND wickets > 0 THEN ROUND(balls_bowled / wickets, 2) ELSE 0 END) STORED",
             "five_wickets": "INT",
             "ten_wickets": "INT",
-            "maidens": "INT",
-            })
-        
-        # Create the players_t20 table for player statistics in T20 matches
-        db.create_table("players_t20", {
-            "player_id": "VARCHAR(20)",
-            "name": "VARCHAR(100)",
-            "matches": "INT",
-            "batted_innings": "INT",
-            "balls_faced": "INT",
-            "runs": "INT",
-            "not_outs": "INT",
-            "highest_score": "INT",
-            "batting_average": "FLOAT",
-            "strike_rate": "FLOAT",
-            "hundreds": "INT",
-            "fifties": "INT",
-            "fours": "INT",
-            "sixes": "INT",
-            "wicket_by_catches": "INT",
-            "wicket_by_stumpings": "INT",
-            "wicket_by_bowled": "INT",
-            "balls_bowled": "INT",
-            "wickets": "INT",
-            "best_bowling": "VARCHAR(20)",
-            "bowling_average": "FLOAT",
-            "economy": "FLOAT",
-            "five_wickets": "INT",
-            "ten_wickets": "INT",
-            "maidens": "INT",
+            "maidens": "INT"
+            }, {
+            "PRIMARY KEY": ["pk_player_id", "player_id"],
             })
 
-    
+        # Create the players_t20 table for player statistics in T20 matches
+        db.create_table("players_t20", {
+                "player_id": "VARCHAR(20)",
+                "name": "VARCHAR(100)",
+                "country": "VARCHAR(100)",
+                "matches": "INT",
+                "batted_innings": "INT",
+                "balls_faced": "INT",
+                "runs": "INT",
+                "not_outs": "INT",
+                "highest_score": "INT",
+                "batting_average": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_faced > 0 AND (batted_innings - not_outs) > 0 THEN ROUND(runs / (batted_innings - not_outs), 2)  ELSE 0 END) STORED",
+                "strike_rate": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_faced > 0 AND runs > 0 THEN ROUND((runs / balls_faced) * 100, 2) ELSE 0 END) STORED",
+                "hundreds": "INT",
+                "fifties": "INT",
+                "fours": "INT",
+                "sixes": "INT",
+                "wicket_by_catches": "INT",
+                "wicket_by_stumpings": "INT",
+                "catches": "INT",
+                "stumpings": "INT",
+                "balls_bowled": "INT",
+                "run_conceded":"INT",
+                "wickets": "INT",
+                "bowling_average": "FLOAT GENERATED ALWAYS AS (CASE WHEN wickets > 0 AND run_conceded > 0 THEN ROUND(run_conceded / wickets, 2)  ELSE 0 END) STORED",
+                "economy": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_bowled > 0 AND run_conceded > 0 THEN ROUND(run_conceded / balls_bowled / 6, 2)  ELSE 0 END) STORED",
+                "bowling_SR": "FLOAT GENERATED ALWAYS AS (CASE WHEN balls_bowled > 0 AND wickets > 0 THEN ROUND(balls_bowled / wickets, 2) ELSE 0 END) STORED",
+                "five_wickets": "INT",
+                "ten_wickets": "INT",
+                "maidens": "INT"
+                }, {
+                "PRIMARY KEY": ["pk_player_id", "player_id"],
+                })
+
 
     except(mysql.connector.Error, mysql.connector.Warning) as e:
         print(f"An error occurred: {e}")
