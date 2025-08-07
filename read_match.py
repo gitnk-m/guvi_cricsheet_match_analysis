@@ -230,7 +230,7 @@ class Match:
         self.records ["city"]= self.data.get("info").get("city", "Unknown")
         self.records ["venue"]= self.data.get("info").get("venue", "Unknown")
         self.records ["date"]= self.data.get("info").get("dates", [])
-        self.records ["match_type"]= self.data.get("info").get("match_type", "Unknown")
+        self.records ["match_type"]= "T20" if self.data.get("info").get("match_type", "Unknown") =="IT20" else self.data.get("info").get("match_type", "Unknown")
         self.records ["team_type"]= self.data.get("info").get("team_type", "Unknown")
         self.records ["event"]= self.data.get("info").get("event", [])
         self.records ["teams"]=self.data.get("info").get("teams", [])
@@ -252,10 +252,12 @@ class Match:
             json.dump(self.records, file, indent=4)
         print(f"Records saved to {output_file}")
 
+# saving filename of test, odi and t20
     def save_file(self, output_file):
         with open(output_file, 'a') as file:
             file.write(f"{self.file_name}\n")
 
+# saving filenam of other matchs
     def reject_match(self, output_file):
         with open(output_file, 'a') as file:
             file.write(f"{self.file_name}\n")
@@ -290,7 +292,7 @@ class Match:
         for id, player in self.records["players_registry"].items():
             player_stats[id] = {
                 "name": player["name"],
-                "country": player["country"],
+                # "country": player["country"],
                 "match":1,
                 "batted_innings": 0,
                 "balls_faced": 0,
@@ -381,7 +383,7 @@ class Match:
             match.save_player_stats({
                 "player_id": player_id,
                 "name": stats["name"],
-                "country": stats["country"],
+                # "country": stats["country"],
                 "matches": stats["match"],
                 "batted_innings": stats["batted_innings"],
                 "balls_faced": stats["balls_faced"],
@@ -437,21 +439,28 @@ class Match:
                 formatted[key] = json.dumps(value)
             else:
                 formatted[key] = value
-        if self.records["match_type"] == "Test":
-            # Use the created database
-            db.use_database("crickSheet_analysis")
-            # insert data into the players_test table
-            db.insert_data_player_stats("players_test", formatted, sum_fields, compare_fields)
-        elif self.records["match_type"] == "ODI":
-            # Use the created database
-            db.use_database("crickSheet_analysis")
-            # insert data into the players_odi table
-            db.insert_data_player_stats("players_odi", formatted, sum_fields, compare_fields)
-        elif self.records["match_type"] == "T20":
-            # Use the created database
-            db.use_database("crickSheet_analysis")
-            # insert data into the players_t20 table
-            db.insert_data_player_stats("players_t20", formatted, sum_fields, compare_fields)        
+        if self.records["team_type"] == "international":
+            if self.records["match_type"] == "Test":
+                # Use the created database
+                db.use_database("crickSheet_analysis")
+                # insert data into the players_test table
+                db.insert_data_player_stats("players_test", formatted, sum_fields, compare_fields)
+            elif self.records["match_type"] == "ODI":
+                # Use the created database
+                db.use_database("crickSheet_analysis")
+                # insert data into the players_odi table
+                db.insert_data_player_stats("players_odi", formatted, sum_fields, compare_fields)
+            elif self.records["match_type"] == "T20" or self.records["match_type"] == "IT20":
+                # Use the created database
+                db.use_database("crickSheet_analysis")
+                # insert data into the players_t20 table
+                db.insert_data_player_stats("players_t20", formatted, sum_fields, compare_fields)        
+        else:
+            if self.records["event"]["name"] == "Indian Premier League":
+                # Use the created database
+                db.use_database("crickSheet_analysis")
+                # insert data into the players_t20 table
+                db.insert_data_player_stats("players_t20", formatted, sum_fields, compare_fields)        
         print(f"Player stats for match {self.file_name} saved to database.")
 
 # read match data from JSON file

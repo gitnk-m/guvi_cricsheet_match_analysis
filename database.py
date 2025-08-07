@@ -1,7 +1,7 @@
 import mysql.connector
 # import json 
 
-dbSetup = True # Set to False if you don't want to create the database
+dbSetup = False # Set to False if you don't want to create the database
 
 
 class mySQLDB:
@@ -60,9 +60,7 @@ class mySQLDB:
         values_list = [tuple(data.values()) ]
         self.cursor.executemany(sql, values_list)
         self.connection.commit()
-        
-
-        
+         
     def select_data(self, table_name, columns='*', where=None):
         sql = f"SELECT {columns} FROM {table_name}"
         if where:
