@@ -7,6 +7,10 @@ __pycache__/
 *.so
 *.ipynb
 *.xlsx
+*.csv
+
+# File
+insight2.pbix
 
 # Distribution / packaging
 .Python
